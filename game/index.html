@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>EMBERLINE 11 — Fireline Landing</title>
+<style>
+  /* EMBERLINE 11 HUD: dark translucent panels, amber/gold accents, red deadline.
+     Every panel is a frame around the 3D world, never the dominant content. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; background: #1a1208;
+    font-family: "Arial Narrow", Arial, Helvetica, sans-serif; color: #f2ead8; }
+  #scene { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; display: block; }
+  #hud { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; pointer-events: none; }
+  .panel { background: rgba(12, 10, 6, 0.72); border: 1px solid rgba(255, 190, 90, 0.45);
+    border-radius: 6px; padding: 8px 10px; }
+  .panel h2 { font-size: 15px; letter-spacing: 1px; color: #ffc857; margin-bottom: 5px; }
+  .panel h2 .dim { color: #cbb98f; font-weight: normal; }
+  .gold { color: #ffc857; } .red { color: #ff5a4a; } .green { color: #7be08a; }
+  .amber { color: #ffb347; } .white { color: #f8f2e2; }
+  .small { font-size: 12px; } .tiny { font-size: 11px; color: #cbb98f; }
+
+  /* Top compass tape */
+  #compass { position: absolute; left: 320px; top: 6px; width: 640px; height: 34px;
+    background: rgba(12, 10, 6, 0.72); border: 1px solid rgba(255, 190, 90, 0.45);
+    border-radius: 6px; overflow: hidden; }
+  #compassInner { position: absolute; left: 0; top: 0; height: 34px; white-space: nowrap; }
+  #compassInner span { display: inline-block; width: 64px; text-align: center; font-size: 13px;
+    color: #d8c9a3; line-height: 34px; }
+  #compassInner span.card { color: #ffc857; font-weight: bold; font-size: 14px; }
+  #compassMarker { position: absolute; left: 316px; top: 0; width: 8px; height: 34px;
+    border-left: 2px solid #ffc857; border-right: 2px solid #ffc857; }
+  #compassHdg { position: absolute; left: 288px; top: 0; width: 64px; text-align: center;
+    font-size: 15px; font-weight: bold; color: #ffc857; line-height: 34px;
+    background: rgba(12, 10, 6, 0.92); }
+  #sortieTag { position: absolute; left: 12px; top: 6px; width: 296px; font-size: 14px;
+    font-weight: bold; color: #f8f2e2; letter-spacing: 1px; line-height: 34px; }
+  #windTag { position: absolute; right: 12px; top: 6px; width: 296px; text-align: right;
+    font-size: 14px; font-weight: bold; color: #ffb347; letter-spacing: 1px; line-height: 34px; }
+
+  /* Hard deadline clock, top centre under the compass tape */
+  #deadline { position: absolute; left: 440px; top: 46px; width: 400px; text-align: center;
+    background: rgba(60, 8, 4, 0.78); border: 2px solid #ff5a4a; border-radius: 6px;
+    padding: 4px 6px 5px; }
+  #deadline .lbl { font-size: 13px; letter-spacing: 2px; color: #ffb0a5; font-weight: bold; }
+  #deadline .clk { font-size: 30px; font-weight: bold; color: #ffd23e; letter-spacing: 2px; line-height: 1.05; }
+
+  /* Multi-goal checklist, top left */
+  #goals { position: absolute; left: 12px; top: 96px; width: 308px; }
+  #goals ul { list-style: none; }
+  #goals li { font-size: 14px; line-height: 1.45; color: #f2ead8; }
+  #goals li.done { color: #9fd8a8; }
+  #goals li .mark { display: inline-block; width: 18px; color: #7be08a; font-weight: bold; }
+  #goals li .pts { float: right; color: #ffc857; font-weight: bold; }
+
+  /* Score + damage, top right */
+  #status { position: absolute; right: 12px; top: 96px; width: 308px; }
+  #status .score { font-size: 26px; font-weight: bold; color: #ffd23e; }
+  #status .row { font-size: 14px; line-height: 1.5; }
+  #status .dmg { color: #ff8a7a; font-weight: bold; }
+  #status .bar { height: 7px; background: #3a2c14; border-radius: 3px; margin: 3px 0 5px; overflow: hidden; }
+  #status .bar i { display: block; height: 7px; background: #ff5a4a; }
+
+  /* Landing panel, left below the goals — the second kind of flying */
+  #landing { position: absolute; left: 12px; top: 300px; width: 308px;
+    border: 2px solid #7be08a; background: rgba(8, 30, 12, 0.78); }
+  #landing h2 { font-size: 15px; color: #7be08a; }
+  #landing .row { font-size: 14px; line-height: 1.5; color: #f2ead8; }
+  #landing .row b { color: #7be08a; }
+
+  /* Speed + altitude tapes */
+  .tape { position: absolute; width: 74px; height: 260px; overflow: hidden;
+    background: rgba(12, 10, 6, 0.66); border: 1px solid rgba(255, 190, 90, 0.45); border-radius: 6px; }
+  .tape .lbl { position: absolute; top: 0; left: 0; width: 74px; text-align: center;
+    font-size: 11px; letter-spacing: 1px; color: #ffc857; font-weight: bold; z-index: 2;
+    background: rgba(12, 10, 6, 0.9); line-height: 20px; }
+  .tape .ticks { position: absolute; left: 0; top: 20px; width: 74px; }
+  .tape .ticks span { display: block; height: 26px; line-height: 26px; text-align: center;
+    font-size: 13px; color: #d8c9a3; }
+  .tape .ticks span.major { color: #f8f2e2; font-weight: bold; }
+  .tape .cur { position: absolute; left: 0; top: 118px; width: 74px; height: 26px; line-height: 26px;
+    text-align: center; font-size: 17px; font-weight: bold; color: #1a1208; background: #ffc857; z-index: 2; }
+  #tapeSpeed { left: 12px; top: 268px; }
+  #tapeAlt { right: 12px; top: 268px; }
+
+  /* Centre: turn grade + ball + moment line */
+  #turnGrade { position: absolute; left: 390px; top: 150px; width: 500px; text-align: center; }
+  #turnGrade .grade { font-size: 21px; font-weight: bold; color: #7be08a; letter-spacing: 1px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
+  #turnGrade .sub { font-size: 14px; color: #f2ead8; text-shadow: 0 2px 6px rgba(0,0,0,0.85); margin-top: 2px; }
+  #ballSlot { width: 220px; height: 14px; margin: 6px auto 0; border: 2px solid #d8c9a3;
+    border-radius: 7px; background: rgba(12,10,6,0.6); position: relative; }
+  #ballSlot .ball { position: absolute; left: 103px; top: 1px; width: 10px; height: 10px;
+    border-radius: 50%; background: #ffd23e; }
+  #moment { position: absolute; left: 260px; top: 532px; width: 760px; text-align: center;
+    background: rgba(12, 10, 6, 0.78); border: 2px solid #ffc857; border-radius: 6px; padding: 7px 10px; }
+  #moment .big { font-size: 21px; font-weight: bold; color: #ffd23e; letter-spacing: 1px; }
+  #moment .sub { font-size: 14px; color: #f2ead8; margin-top: 2px; }
+
+  /* Live decision panel, right centre */
+  #decision { position: absolute; right: 98px; top: 300px; width: 312px;
+    border: 2px solid #ffd23e; background: rgba(40, 26, 4, 0.82); }
+  #decision h2 { font-size: 16px; color: #ffd23e; }
+  #decision .opt { font-size: 15px; line-height: 1.35; margin: 6px 0; color: #f8f2e2; }
+  #decision .opt b { color: #ffd23e; }
+  #decision .opt .cost { color: #ffb347; font-weight: bold; }
+  #decision .auto { font-size: 14px; font-weight: bold; color: #ff5a4a; text-align: center;
+    border-top: 1px solid rgba(255,190,90,0.4); padding-top: 5px; }
+
+  /* Radio, bottom left above gauges */
+  #radio { position: absolute; left: 12px; top: 598px; width: 520px; }
+  #radio .who { font-size: 13px; letter-spacing: 1px; color: #7be08a; font-weight: bold; }
+  #radio .say { font-size: 14px; line-height: 1.35; color: #f8f2e2; margin-top: 2px; }
+
+  /* Warning lights strip, bottom right above gauges */
+  #warnLights { position: absolute; right: 12px; top: 636px; width: 560px; text-align: right; }
+  #warnLights span { display: inline-block; font-size: 12px; font-weight: bold; letter-spacing: 1px;
+    padding: 4px 8px; margin-left: 6px; border-radius: 4px; background: #3a2c14; color: #8a7a58; }
+  #warnLights span.on { background: #ff5a4a; color: #fff; }
+  #warnLights span.warn { background: #ffb347; color: #1a1208; }
+
+  /* Bottom instrument row: 8 round gauges */
+  #gauges { position: absolute; left: 12px; top: 664px; width: 1256px; height: 124px;
+    background: rgba(12, 10, 6, 0.78); border: 1px solid rgba(255, 190, 90, 0.45);
+    border-radius: 8px; display: flex; justify-content: space-around; align-items: center; }
+  .gauge { width: 140px; text-align: center; }
+  .gauge svg { display: block; margin: 0 auto; }
+  .gauge .glabel { font-size: 11px; letter-spacing: 1px; color: #cbb98f; margin-top: 1px; }
+  .gauge .gval { font-size: 14px; font-weight: bold; color: #f8f2e2; }
+
+  /* Debrief + title overlays (shots 3 and 4) */
+  #overlay { position: absolute; left: 0; top: 0; width: 1280px; height: 800px;
+    background: rgba(8, 6, 3, 0.55); display: none; }
+  #overlayCard { position: absolute; left: 190px; top: 70px; width: 900px;
+    background: rgba(14, 11, 6, 0.94); border: 2px solid #ffc857; border-radius: 10px; padding: 20px 26px; }
+  #overlayCard h1 { font-size: 34px; color: #ffd23e; letter-spacing: 2px; }
+  #overlayCard h3 { font-size: 16px; color: #ffc857; margin: 12px 0 4px; letter-spacing: 1px; }
+  #overlayCard p, #overlayCard li { font-size: 15px; line-height: 1.5; color: #f2ead8; }
+  #overlayCard ul { list-style: none; }
+  #overlayCard .cols { display: flex; gap: 28px; }
+  #overlayCard .cols > div { flex: 1; }
+  #overlayCard .big { font-size: 22px; font-weight: bold; color: #ffd23e; }
+  #overlayCard .menu { margin-top: 10px; }
+  #overlayCard .menu div { font-size: 17px; padding: 5px 0; }
+  #overlayCard .menu div.sel { color: #ffd23e; font-weight: bold; }
+  #overlayCard .menu div.sel::before { content: "▶ "; }
+  #hidden { display: none; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="scene" width="1280" height="800"></canvas>
+<div id="hud">
+  <div id="sortieTag">EMBERLINE 11 · SORTIE 3 OF 3</div>
+  <div id="compass"><div id="compassInner"></div><div id="compassMarker"></div><div id="compassHdg">000°</div></div>
+  <div id="windTag">WIND 295°/26 KT</div>
+
+  <div id="deadline"><div class="lbl">RIDGE CABINS BURN IN</div><div class="clk" id="deadlineClock">04:12</div></div>
+
+  <div id="goals" class="panel"><h2>SORTIE 3 OF 3 · FIRELINE <span class="dim">— GOALS 4/6</span></h2><ul id="goalList"></ul></div>
+
+  <div id="status" class="panel">
+    <div class="row"><span class="tiny">SCORE</span> <span class="score" id="scoreVal">0</span> <span class="tiny" id="gradeVal">· GRADE A</span></div>
+    <div class="row">AIRFRAME <b class="gold" id="airframeVal">100%</b></div>
+    <div class="bar"><i id="airframeBar" style="width:100%"></i></div>
+    <div class="row dmg" id="dmgEngine">RIGHT ENGINE 100%</div>
+    <div class="row dmg" id="dmgHeat">HEAT 38%</div>
+    <div class="row tiny" id="loadoutVal">LOADOUT: MIXED · 6,000 L WATER</div>
+  </div>
+
+  <div id="landing" class="panel">
+    <h2>LANDING — FIRE BASE STRIP</h2>
+    <div class="row" id="landGlide">GLIDE 3.0° · — FT AGL · — KT</div>
+    <div class="row" id="landFlare">FLARE AT 30 FT · HOLD IT</div>
+    <div class="row" id="landZone">ZONE +12 M TARGET · STRIP 420 M</div>
+  </div>
+
+  <div id="tapeSpeed" class="tape"><div class="lbl">SPEED KT</div><div class="ticks" id="speedTicks"></div><div class="cur" id="speedCur">0</div></div>
+  <div id="tapeAlt" class="tape"><div class="lbl">ALT FT AGL</div><div class="ticks" id="altTicks"></div><div class="cur" id="altCur">0</div></div>
+
+  <div id="turnGrade">
+    <div class="grade" id="turnGradeLine">CLEAN TURN — 0° BANK · BALL-CENTRED</div>
+    <div class="sub" id="dropGradeLine">DROP HEIGHT — FT · GOOD · ON RAILS! x8</div>
+    <div id="ballSlot"><div class="ball" id="coordBall"></div></div>
+  </div>
+
+  <div id="moment"><div class="big" id="momentLine">ON GLIDEPATH — FIRE BASE STRIP · 3.0° · ON RAILS x8</div><div class="sub" id="momentSub">461 ACRES SAVED · 6 ABOARD · FUEL 24% · T+03:20</div></div>
+
+  <div id="decision" class="panel">
+    <h2 id="decisionTitle">DECISION — LAND OR DIVERT</h2>
+    <div class="opt" id="decisionOpt1"><b>1 LAND FIRE BASE</b> — short water strip, crosswind, graded</div>
+    <div class="opt" id="decisionOpt2"><b>2 DIVERT BLUEBIRD LAKE</b> — safe, longer water</div>
+    <div class="auto" id="decisionAuto">AUTO · LAND IN 3 S</div>
+  </div>
+
+  <div id="radio" class="panel">
+    <div class="who">RADIO · DISPATCH — DANA</div>
+    <div class="say" id="radioLine">“Emberline 11, Fire Base is lit — strip is short and the wind is across it. Hold the crab, flare at thirty, your call.”</div>
+  </div>
+
+  <div id="warnLights">
+    <span id="wStall">STALL</span><span id="wFuel" class="warn">LOW FUEL</span><span id="wHeat" class="on">HOT ENG</span><span id="wG">OVER G</span><span id="wScoop">SCOOP</span>
+  </div>
+
+  <div id="gauges"></div>
+</div>
+<div id="overlay"><div id="overlayCard"></div></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

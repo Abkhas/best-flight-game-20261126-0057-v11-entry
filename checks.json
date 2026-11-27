@@ -1,0 +1,46 @@
+{
+  "webgl2-available": {
+    "pass": true,
+    "detail": "true"
+  },
+  "01-cover.jpg-ready": {
+    "pass": true,
+    "detail": ""
+  },
+  "01-cover.jpg-size": {
+    "pass": true,
+    "detail": "151571 B"
+  },
+  "02-cockpit.jpg-ready": {
+    "pass": true,
+    "detail": ""
+  },
+  "02-cockpit.jpg-size": {
+    "pass": true,
+    "detail": "150260 B"
+  },
+  "03-board.jpg-ready": {
+    "pass": true,
+    "detail": ""
+  },
+  "03-board.jpg-size": {
+    "pass": true,
+    "detail": "146140 B"
+  },
+  "04-title.jpg-ready": {
+    "pass": true,
+    "detail": ""
+  },
+  "04-title.jpg-size": {
+    "pass": true,
+    "detail": "67180 B"
+  },
+  "record-flown": {
+    "pass": true,
+    "detail": "drops=2 scoops=2 evacuees=6 acres=461 score=3061 landing=A 94 329fpm zone-72 landed=true touched=true"
+  },
+  "record-scores-consistent": {
+    "pass": true,
+    "detail": "acres=461 contained=66% score=3061 coverFuel=23%"
+  }
+}
